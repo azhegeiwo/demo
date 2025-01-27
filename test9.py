@@ -6,67 +6,95 @@ class GUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title('高一七班人员名单')
+        self.checkbutton_vars = []
         self.interface()
 
     def interface(self):
-        """界面编写位置"""
-        # 创建获取抽取人数的输入框及标签
-        self.draw_num_label = tk.Label(self.root, text="请输入抽取人数：")
-        self.draw_num_label.grid(row=0, column=0,)
-        self.draw_num_entry = tk.Entry(self.root)
-        self.draw_num_entry.grid(row=0, column=1,)
+        """界面布局"""
+        # 输入框部分
+        input_frame = tk.Frame(self.root)
+        input_frame.grid(row=0, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+        
+        tk.Label(input_frame, text="抽取人数：").pack(side="left")
+        self.draw_num_entry = tk.Entry(input_frame, width=8)
+        self.draw_num_entry.pack(side="left", padx=5)
+        
+        tk.Button(
+            input_frame, 
+            text="开始抽取",
+            command=self.confirm_draw
+        ).pack(side="left", padx=5)
 
-        # 创建确认按钮
-        confirm_button = tk.Button(self.root, text="确认", command=self.confirm_draw)
-        confirm_button.grid(row=0, column=2, padx=10, pady=10)
+        # 复选框区域
+        list_frame = tk.LabelFrame(self.root, text="参与抽取人员（请勾选）")
+        list_frame.grid(row=1, column=0, columnspan=5, sticky="nsew", padx=5, pady=5)
 
+        # 配置网格列均匀分布
+        for col in range(5):
+            list_frame.columnconfigure(col, weight=1, uniform="cols")
 
-        # 放置人员名单复选框
-       
-        horizontal_gap = 0  # 水平方向复选框间距
-        vertical_gap = 5  # 垂直方向复选框间距
-        col_num = 5  # 每行放置的复选框数量
+        # 计算最大名字长度用于统一宽度
+        max_name_len = max(len(name) for name in self.all_names)
+        check_width = max_name_len + 1  # 增加1个字符余量
 
-        for index, name in enumerate(self.all_names):
-            var = tk.BooleanVar()
-            var.set(True)
+        # 生成复选框
+        for idx, name in enumerate(self.all_names):
+            var = tk.BooleanVar(value=True)
             self.checkbutton_vars.append(var)
-            row = index // col_num
-            col = index % col_num+3
-            checkbutton = tk.Checkbutton(self.root, text=[name], variable=var)
-            checkbutton.grid(row=2 + row, column=col, padx=horizontal_gap, pady=vertical_gap, sticky="w")
+            
+            cb = tk.Checkbutton(
+                list_frame,
+                text=name,
+                variable=var,
+                anchor="w",
+                width=check_width,  # 统一宽度
+                padx=5,
+                pady=2
+            )
+            row, col = divmod(idx, 5)
+            cb.grid(row=row, column=col, sticky="w")
+
+        # 配置根窗口自适应
+        self.root.rowconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
 
     def confirm_draw(self):
+        """处理抽取逻辑"""
         try:
-            draw_num = int(self.draw_num_entry.get())
-            checked_names = [name for name, var in zip(self.all_names, self.checkbutton_vars) if var.get()]
-            if draw_num > len(checked_names):
-                messagebox.showinfo("提示", f"输入的抽取人数大于勾选的人数（勾选人数为{len(checked_names)}），请重新输入。")
+            num = int(self.draw_num_entry.get())
+            if num <= 0:
+                raise ValueError
+            
+            candidates = [
+                name 
+                for name, var in zip(self.all_names, self.checkbutton_vars) 
+                if var.get()
+            ]
+            
+            if not candidates:
+                messagebox.showwarning("警告", "请至少勾选一个参与者！")
                 return
-            elif draw_num == 0:
-                messagebox.showinfo("提示", "抽取人数不能为0，请重新输入。")
+                
+            if num > len(candidates):
+                messagebox.showwarning(
+                    "人数不足",
+                    f"当前勾选{len(candidates)}人，少于需要抽取的{num}人！"
+                )
                 return
-            random_draw_result = random.sample(checked_names, draw_num)
-            messagebox.showinfo("抽取结果", f"本次随机抽取的{draw_num}个人名如下：\n{', '.join(random_draw_result)}")
+                
+            result = random.sample(candidates, num)
+            messagebox.showinfo(
+                "抽取结果",
+                f"成功抽取{num}人：\n" + "\n".join(result)
+            )
+            
         except ValueError:
-            messagebox.showinfo("提示", "请输入有效的整数作为抽取人数。")
+            messagebox.showerror("输入错误", "请输入有效的正整数！")
 
-    def get_checked_names(self):
-        checked_names = [name for name, var in zip(self.all_names, self.checkbutton_vars) if var.get()]
-        if checked_names:
-            messagebox.showinfo("勾选名单", f"当前勾选的人名名单如下：\n{', '.join(checked_names)}")
-        else:
-            messagebox.showinfo("提示", "目前没有勾选任何人哦。")
-        return checked_names
+    all_names = [
+        #输入姓名加冒号，每个姓名用逗号隔开
+    ]
 
-    all_names = ["安雨涵", "王恩誉", "陈宇航", "王祺皓", " 程帅", "王诗雨", "高睿蓬", "王子丰", "巩懿轩", "王婧琪",
-                          "郭东航", "徐焓越", "郭怡君", "徐萌萌", "郭瑀琪", "杨鉴博", "郝宇彤", "杨棕棋", " 经爽", "于瀚程",
-                          "康家睿", " 于琪", "李浩霖", "岳楠钦", "李宇航", "杨珩冉", "刘袈岐", "张涵博", "刘潇阳", "张圣哲",
-                          " 刘洋", "张胜博", "刘宇轩", "张卫东", "刘雨欣", "张晓桐", "刘子萱", "张轩浩", "卢俊竹", "张紫桐",
-                          "牟唯语", "赵美琪", "倪永烨", "赵梓睿", "乔姝菡", "赵紫壹", "乔馨仪", "陈嘉豪", " 任昱", " 周墨",
-                          "史中山", "周怡宁", " 释然", "邹冬雪", " 宋雨", " 田欣", "王爱斌"]
-    checkbutton_vars = []
 if __name__ == '__main__':
     app = GUI()
-    root = app.root
-    root.mainloop()
+    app.root.mainloop()
